@@ -2,19 +2,41 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
 
 import static org.junit.Assert.assertTrue;
 
+@RunWith(Parameterized.class)
 public class RecuperarSenhaTest {
 
     private WebDriver driver;
     private WebDriverWait wait;
+
+    private final String email;
+    private final String tipoTeste; // "positivo", "nao_cadastrado", "invalido"
+
+    public RecuperarSenhaTest(String email, String tipoTeste) {
+        this.email = email;
+        this.tipoTeste = tipoTeste;
+    }
+
+    @Parameterized.Parameters(name = "{index}: Testando com email={0}, tipo={1}")
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+                {"usuariotest@test.com", "positivo"},
+                {"test@test.com.br", "nao_cadastrado"},
+                {"felipe", "invalido"}
+        });
+    }
 
     @Before
     public void setUp() {
@@ -71,39 +93,38 @@ public class RecuperarSenhaTest {
     }
 
     @Test
-    public void testRecuperarSenhaPositivo() {
+    public void testRecuperarSenha() {
         abrirModalRecuperarSenha();
-        digitarEmailComDelay("user@example.com");
-        clicarOk();
-        clicarContinuar();
-    }
-
-    @Test
-    public void testRecuperarSenhaEmailNaoCadastrado() {
-        abrirModalRecuperarSenha();
-        digitarEmailComDelay("test@test.com.br");
+        digitarEmailComDelay(email);
         clicarOk();
 
-        boolean mensagemErroPresente = driver.findElements(
-                By.xpath("//p[contains(text(),'E-mail não cadastrado')]")
-        ).size() > 0;
+        switch (tipoTeste) {
+            case "positivo":
+                clicarContinuar();
+                // Pode adicionar asserts específicos do fluxo positivo se quiser
+                break;
 
-        if (!mensagemErroPresente) {
-            System.out.println("⚠ BUG DETECTADO: Sistema não exibiu mensagem de 'E-mail não cadastrado'!");
+            case "nao_cadastrado":
+                boolean mensagemErroPresente = driver.findElements(
+                        By.xpath("//p[contains(text(),'E-mail não cadastrado')]")
+                ).size() > 0;
+
+                if (!mensagemErroPresente) {
+                    System.out.println("⚠ BUG DETECTADO: Sistema não exibiu mensagem de 'E-mail não cadastrado'!");
+                }
+
+                assertTrue("BUG: Sistema não exibiu mensagem de 'E-mail não cadastrado'!", mensagemErroPresente);
+                break;
+
+            case "invalido":
+                WebElement errorMsg = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                        By.xpath("//p[contains(@class,'js-reset-pass-error-msg') and text()='Este campo é obrigatório.']")));
+                assertTrue(errorMsg.isDisplayed());
+                break;
+
+            default:
+                throw new IllegalArgumentException("Tipo de teste desconhecido: " + tipoTeste);
         }
-
-        assertTrue("BUG: Sistema não exibiu mensagem de 'E-mail não cadastrado'!", mensagemErroPresente);
-    }
-
-    @Test
-    public void testRecuperarSenhaEmailInvalido() {
-        abrirModalRecuperarSenha();
-        digitarEmailComDelay("felipe");
-        clicarOk();
-
-        WebElement errorMsg = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath("//p[contains(@class,'js-reset-pass-error-msg') and text()='Este campo é obrigatório.']")));
-        assertTrue(errorMsg.isDisplayed());
     }
 
     @After
