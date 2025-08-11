@@ -73,10 +73,9 @@ public class RecuperarSenhaTest {
     @Test
     public void testRecuperarSenhaPositivo() {
         abrirModalRecuperarSenha();
-        digitarEmailComDelay("fsizoto@gmail.com");
+        digitarEmailComDelay("user@example.com");
         clicarOk();
         clicarContinuar();
-        // Aqui pode inserir asserts adicionais para sucesso, se quiser
     }
 
     @Test
